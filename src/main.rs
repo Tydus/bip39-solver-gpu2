@@ -5,7 +5,11 @@ use ocl::prm::{cl_ulong};
 use ocl::enums::ArgVal;
 use ocl::builders::ContextProperties;
 use std::str;
-use rand::Rng;
+use std::time::Instant;
+//use rand::Rng;
+use rand::prelude::*;
+use rand::prng::hc128::Hc128Rng;
+
 use rayon::prelude::*;
 use serde::{Deserialize};
 
@@ -16,57 +20,44 @@ struct WorkResponse {
   batch_size: u64
 }
 
-struct Work {
-  start_hi: u64,
-  start_lo: u64,
-  batch_size: u64
-}
-
-
-fn get_work() -> Work {
-  let mut rng = rand::thread_rng();
-
-  let start_lo: u64 = rng.gen();
-  let start_hi: u64 = rng.gen();
-
-  println!("start_hi={} start_lo={}", start_hi, start_lo);
-
-  return Work {
-      start_lo: start_lo,
-      start_hi: start_hi,
-      batch_size: 65536
-  }
-}
-
 fn mnemonic_gpu(platform_id: core::types::abs::PlatformId, device_id: core::types::abs::DeviceId, src: std::ffi::CString, kernel_name: &String) -> ocl::core::Result<()> {
   let context_properties = ContextProperties::new().platform(platform_id);
   let context = core::create_context(Some(&context_properties), &[device_id], None, None).unwrap();
   let program = core::create_program_with_source(&context, &[src]).unwrap();
   core::build_program(&program, Some(&[device_id]), &CString::new("").unwrap(), None, None).unwrap();
   let queue = core::create_command_queue(&context, &device_id, None).unwrap();
+  //let mut rng = rand::thread_rng();
+  let mut rng = Hc128Rng::from_entropy();
 
   loop {
-    let work: Work = get_work();
-    let items: u64 = work.batch_size;
+    let now = Instant::now();
 
-    let mnemonic_hi: cl_ulong = work.start_hi;
-    let mnemonic_lo: cl_ulong = work.start_lo;
-    
-    let mut target_mnemonic = vec![0u8; 120];
+
+    let start_0: cl_ulong = rng.gen();
+    let start_1: cl_ulong = rng.gen();
+    let start_2: cl_ulong = rng.gen();
+    let start_3: cl_ulong = rng.gen();
+    println!("start={:#016x} {:#016x} {:#016x} {:#016x}", start_3, start_2, start_1, start_0);
+
+    let items: u64 = 1048576;
+
+    let mut target_mnemonic = vec![0u8; 360];
     let mut mnemonic_found = vec![0u8; 1];
     
     let target_mnemonic_buf = unsafe { core::create_buffer(&context, flags::MEM_WRITE_ONLY |
-      flags::MEM_COPY_HOST_PTR, 120, Some(&target_mnemonic))? };
+      flags::MEM_COPY_HOST_PTR, 360, Some(&target_mnemonic))? };
     
     let mnemonic_found_buf = unsafe { core::create_buffer(&context, flags::MEM_WRITE_ONLY |
         flags::MEM_COPY_HOST_PTR, 1, Some(&mnemonic_found))? };
   
     let kernel = core::create_kernel(&program, kernel_name)?;
 
-    core::set_kernel_arg(&kernel, 0, ArgVal::scalar(&mnemonic_hi))?;
-    core::set_kernel_arg(&kernel, 1, ArgVal::scalar(&mnemonic_lo))?;
-    core::set_kernel_arg(&kernel, 2, ArgVal::mem(&target_mnemonic_buf))?;
-    core::set_kernel_arg(&kernel, 3, ArgVal::mem(&mnemonic_found_buf))?;
+    core::set_kernel_arg(&kernel, 0, ArgVal::scalar(&start_3))?;
+    core::set_kernel_arg(&kernel, 1, ArgVal::scalar(&start_2))?;
+    core::set_kernel_arg(&kernel, 2, ArgVal::scalar(&start_1))?;
+    core::set_kernel_arg(&kernel, 3, ArgVal::scalar(&start_0))?;
+    core::set_kernel_arg(&kernel, 4, ArgVal::mem(&target_mnemonic_buf))?;
+    core::set_kernel_arg(&kernel, 5, ArgVal::mem(&mnemonic_found_buf))?;
 
     unsafe { core::enqueue_kernel(&queue, &kernel, 1, None, &[items as usize,1,1],
         None, None::<core::Event>, None::<&mut core::Event>)?; }
@@ -79,7 +70,7 @@ fn mnemonic_gpu(platform_id: core::types::abs::PlatformId, device_id: core::type
         None::<core::Event>, None::<&mut core::Event>)?; }
     
     if mnemonic_found[0] == 0x01 {
-      let s = match String::from_utf8((&target_mnemonic[0..120]).to_vec()) {
+      let s = match String::from_utf8((&target_mnemonic[0..360]).to_vec()) {
           Ok(v) => v,
           Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
       };
@@ -87,6 +78,9 @@ fn mnemonic_gpu(platform_id: core::types::abs::PlatformId, device_id: core::type
       println!("mnemonic={}", mnemonic.to_string());
 
     }
+
+    println!("{} Keys / s", 1000. * items as f64 / now.elapsed().as_millis() as f64);
+
   }
 }
 
