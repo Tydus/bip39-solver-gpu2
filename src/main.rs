@@ -5,13 +5,9 @@ use ocl::prm::{cl_ulong};
 use ocl::enums::ArgVal;
 use ocl::builders::ContextProperties;
 use std::str;
-use std::collections::HashMap;
+use rand::Rng;
 use rayon::prelude::*;
-use reqwest;
 use serde::{Deserialize};
-
-const WORK_SERVER_URL: &str = "http://localhost:3000";
-const WORK_SERVER_SECRET: &str = "secret";
 
 #[derive(Deserialize, Debug)]
 struct WorkResponse {
@@ -23,48 +19,22 @@ struct WorkResponse {
 struct Work {
   start_hi: u64,
   start_lo: u64,
-  batch_size: u64,
-  offset: u128
+  batch_size: u64
 }
 
-fn log_solution(offset: u128, mnemonic: String) {
-  let mut json_body = HashMap::new();
-  json_body.insert("mnemonic", mnemonic);
-  json_body.insert("offset", offset.to_string());
-  json_body.insert("secret", WORK_SERVER_SECRET.to_string());
-  let client = reqwest::blocking::Client::new();
-  let _res = client.post(&format!("{}/mnemonic", WORK_SERVER_URL.to_string()).to_string()).json(&json_body).send();
-}
-
-fn log_work(offset: u128) {
-  let mut json_body = HashMap::new();
-  json_body.insert("offset", offset.to_string());
-  json_body.insert("secret", WORK_SERVER_SECRET.to_string());
-  let client = reqwest::blocking::Client::new();
-  let _res = client.post(&format!("{}/work", WORK_SERVER_URL.to_string()).to_string()).json(&json_body).send();
-}
 
 fn get_work() -> Work {
-  let response = reqwest::blocking::get(&format!("{}/work?secret={}", WORK_SERVER_URL.to_string(), WORK_SERVER_SECRET.to_string()).to_string()).unwrap();
-  let work_response: WorkResponse = response.json().unwrap();
+  let mut rng = rand::thread_rng();
 
-  let mut start: u128 = 0;
-  let mut start_shift = 128;
+  let start_lo: u64 = rng.gen();
+  let start_hi: u64 = rng.gen();
 
-  for idx in &work_response.indices {
-    start_shift -= 11;
-    start = start | (idx << start_shift);
-  }
-
-  start += work_response.offset;
-  let start_lo: u64 = ((start << 64) >> 64) as u64;
-  let start_hi: u64 = (start >> 64) as u64;
+  println!("start_hi={} start_lo={}", start_hi, start_lo);
 
   return Work {
-    start_lo: start_lo,
-    start_hi: start_hi,
-    batch_size: work_response.batch_size,
-    offset: work_response.offset
+      start_lo: start_lo,
+      start_hi: start_hi,
+      batch_size: 65536
   }
 }
 
@@ -108,15 +78,14 @@ fn mnemonic_gpu(platform_id: core::types::abs::PlatformId, device_id: core::type
     unsafe { core::enqueue_read_buffer(&queue, &mnemonic_found_buf, true, 0, &mut mnemonic_found,
         None::<core::Event>, None::<&mut core::Event>)?; }
     
-    log_work(work.offset);
-
     if mnemonic_found[0] == 0x01 {
       let s = match String::from_utf8((&target_mnemonic[0..120]).to_vec()) {
           Ok(v) => v,
           Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
       };
       let mnemonic = s.trim_matches(char::from(0));
-      log_solution(work.offset, mnemonic.to_string());
+      println!("mnemonic={}", mnemonic.to_string());
+
     }
   }
 }
