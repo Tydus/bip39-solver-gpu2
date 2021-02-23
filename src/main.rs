@@ -37,7 +37,7 @@ fn mnemonic_gpu(platform_id: core::types::abs::PlatformId, device_id: core::type
     let start_1: cl_ulong = rng.gen();
     let start_2: cl_ulong = rng.gen();
     let start_3: cl_ulong = rng.gen();
-    println!("start={:#016x} {:#016x} {:#016x} {:#016x}", start_3, start_2, start_1, start_0);
+    //println!("start={:#016x} {:#016x} {:#016x} {:#016x}", start_3, start_2, start_1, start_0);
 
     let items: u64 = 1048576;
 
