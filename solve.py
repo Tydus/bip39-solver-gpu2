@@ -13,7 +13,7 @@ file_list = ["common", "ripemd", "sha2", "secp256k1_common", "secp256k1_scalar",
 
 def main():
     n = 65536
-    if len(sys.argv == 3):
+    if len(sys.argv) == 3:
         n = int(sys.argv[2])
 
     ctx = pyopencl.create_some_context()
