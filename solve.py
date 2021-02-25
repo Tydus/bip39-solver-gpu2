@@ -32,14 +32,14 @@ def main():
     print("Built kernel")
 
     while True:
-        mnemonic_start = numpy.array(struct.unpack('!4Q', secrets.token_bytes(32)), dtype=numpy.uint64)
-        mnemonic_start_g = pyopencl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=mnemonic_start)
-
         t0 = time.time()
+        for i in range(10):
+            mnemonic_start = numpy.array(struct.unpack('!4Q', secrets.token_bytes(32)), dtype=numpy.uint64)
+            mnemonic_start_g = pyopencl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=mnemonic_start)
 
-        bruteforce(queue, [n], None, mnemonic_start_g, target_pkhash_g, target_pkhash_len).wait()
+            bruteforce(queue, [n], None, mnemonic_start_g, target_pkhash_g, target_pkhash_len).wait()
 
-        print("%.2f Keys / s" % (n / (time.time() - t0)))
+        print("%.2f Keys / s" % (10 * n / (time.time() - t0)))
 
 
 if __name__ == "__main__":
