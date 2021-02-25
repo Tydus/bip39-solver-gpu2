@@ -199,6 +199,8 @@ __kernel void bruteforce(
   }
 
   if(found_target == 1) {
+    /* seems sha256() tampered my buffer */
+    mnemonic[mnemonic_index - 1] = 0;
     printf("%s\n", mnemonic);
   }
 }
