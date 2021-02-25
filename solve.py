@@ -11,9 +11,10 @@ import binascii
 
 file_list = ["common", "ripemd", "sha2", "secp256k1_common", "secp256k1_scalar", "secp256k1_field", "secp256k1_group", "secp256k1_prec", "secp256k1", "address", "mnemonic_constants", "bruteforce"];
 
-n = 65536
-
 def main():
+    n = 65536
+    if len(sys.argv == 3):
+        n = int(sys.argv[2])
 
     ctx = pyopencl.create_some_context()
     queue = pyopencl.CommandQueue(ctx)
