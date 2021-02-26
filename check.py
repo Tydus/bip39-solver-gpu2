@@ -15,4 +15,4 @@ if __name__ == "__main__":
     while True:
         a = input()
         if not a: break
-        prit(mnemonic_to_addr(a))
+        print(mnemonic_to_addr(a))
