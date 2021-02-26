@@ -1,2 +1,4 @@
 pyopencl
 numpy
+base58
+py-crypto-hd-wallet
