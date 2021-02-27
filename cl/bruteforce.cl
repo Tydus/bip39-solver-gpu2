@@ -1,7 +1,9 @@
 __kernel void bruteforce(
   __global const ulong *mnemonic_start,
   __global const uchar *target_pkhash,
-  const uchar target_pkhash_len
+  const uchar target_pkhash_len,
+  __global const uchar *salt,
+  const uchar salt_len
 ) {
   ulong idx = get_global_id(0);
 
@@ -147,15 +149,15 @@ __kernel void bruteforce(
   uchar seed[64] = { 0 };
   uchar sha512_result[64] = { 0 };
   uchar key_previous_concat[256] = { 0 };
-  uchar salt[12] = { 109, 110, 101, 109, 111, 110, 105, 99, 0, 0, 0, 1 };
+
   for(int x=0;x<128;x++){
     key_previous_concat[x] = ipad_key[x];
   }
-  for(int x=0;x<12;x++){
+  for(int x=0;x<salt_len;x++){
     key_previous_concat[x+128] = salt[x];
   }
 
-  sha512(&key_previous_concat, 140, &sha512_result);
+  sha512(&key_previous_concat, 128+salt_len, &sha512_result);
   copy_pad_previous(&opad_key, &sha512_result, &key_previous_concat);
   sha512(&key_previous_concat, 192, &sha512_result);
   xor_seed_with_round(&seed, &sha512_result);
@@ -171,8 +173,6 @@ __kernel void bruteforce(
   uchar network = BITCOIN_MAINNET;
   extended_private_key_t master_private;
   extended_public_key_t master_public;
-
-  /* print_seed(seed); */
 
   new_master_from_seed(network, &seed, &master_private);
   public_from_private(&master_private, &master_public);
@@ -201,6 +201,7 @@ __kernel void bruteforce(
   if(found_target == 1) {
     /* seems sha256() tampered my buffer */
     mnemonic[mnemonic_index - 1] = 0;
-    printf("%s\n", mnemonic);
+    puts(mnemonic);
+    print_byte_array_hex(hash160_address, 20);
   }
 }
