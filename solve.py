@@ -58,7 +58,11 @@ def main():
     worksize = 65536
     if len(sys.argv) == 3: worksize = int(sys.argv[2])
 
-    bruteforce = Bruteforce(worksize, password=getpass.getpass())
+    password = getpass.getpass()
+    password2 = getpass.getpass('Password again: ')
+    assert password == password2, "Password mismatch"
+
+    bruteforce = Bruteforce(worksize, password=password)
 
     bruteforce.do_work(binascii.unhexlify('0000'), iter=3)
     bruteforce.do_work(binascii.unhexlify('ffff'), iter=3)
