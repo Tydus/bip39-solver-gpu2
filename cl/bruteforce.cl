@@ -201,7 +201,7 @@ __kernel void bruteforce(
   if(found_target == 1) {
     /* seems sha256() tampered my buffer */
     mnemonic[mnemonic_index - 1] = 0;
-    puts(mnemonic);
+    printf("%s\n", mnemonic);
     print_byte_array_hex(hash160_address, 20);
   }
 }
